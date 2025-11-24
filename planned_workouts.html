@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>אימונים מתוכננים</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet" />
+  <!-- Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+  <!-- Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Heebo', sans-serif;
+    }
+    .workout-card {
+      border-radius: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.3s;
+    }
+    .workout-card:hover {
+      transform: scale(1.02);
+    }
+    .workout-past {
+      background-color: #e9ecef !important; /* אפור בהיר */
+    }
+    .workout-today {
+      background-color: #d4edda !important; /* ירוק בהיר */
+    }
+    .workout-future {
+      background-color: #ffffff;
+    }
+    .day-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: #333;
+    }
+    .workout-name {
+      font-weight: 600;
+      color: #212529;
+    }
+    .workout-meta {
+      color: #6c757d;
+      font-size: 0.9rem;
+    }
+    .workout-notes {
+      font-size: 0.9rem;
+      color: #495057;
+      margin-top: 0.25rem;
+    }
+    .error-message {
+      color: #dc3545;
+      background-color: #f8d7da;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container py-4">
+    <h2 class="text-center mb-4">אימונים מתוכננים</h2>
+
+    <div v-if="error" class="error-message">
+      שגיאה בטעינת אימונים: {{ error }}
+    </div>
+
+    <div v-else>
+      <div v-if="loading" class="text-center py-5 text-muted">
+        טוען אימונים...
+      </div>
+      <div v-else-if="workouts.length === 0" class="text-center py-5 text-muted">
+        אין אימונים מתוכננים כרגע.
+      </div>
+
+      <div v-else v-for="(group, date) in groupedWorkouts" :key="date">
+        <div class="day-title">{{ formatDate(date) }}</div>
+
+        <div v-for="workout in group" :key="workout.id" :class="['workout-card', workoutClass(workout.workout_date)]" @click="openWorkout(workout.id)">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="workout-name">{{ workout.name }}</div>
+            <div class="badge bg-light text-dark">{{ workout.state }}</div>
+          </div>
+          <div class="workout-meta mt-1">
+            💪 {{ totalExercises(workout) }} תרגילים | 🧠 {{ workoutTypes(workout) }}
+          </div>
+          <div v-if="workout.notes" class="workout-notes">
+            🗒️ {{ workout.notes }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          workouts: [],
+          loading: false,
+          error: null
+        };
+      },
+      computed: {
+        groupedWorkouts() {
+          const grouped = {};
+          this.workouts.forEach(w => {
+            if (!w.workout_date) return;
+            if (!grouped[w.workout_date]) grouped[w.workout_date] = [];
+            grouped[w.workout_date].push(w);
+          });
+          return grouped;
+        }
+      },
+      methods: {
+        async fetchWorkouts() {
+          this.loading = true;
+          this.error = null;
+          try {
+            const endpoint = 'https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/get-workouts-feed';
+            const res = await axios.get(endpoint, {
+              params: { state: 'מתוכנן' }
+            });
+
+            if (!res.data || !Array.isArray(res.data.workouts)) {
+              throw new Error('מבנה תשובה לא תקין מהשרת');
+            }
+
+            this.workouts = res.data.workouts;
+          } catch (err) {
+            console.error('שגיאה בטעינת אימונים:', err);
+            this.error = err.response?.data?.message || err.message || 'שגיאה לא ידועה';
+          } finally {
+            this.loading = false;
+          }
+        },
+        totalExercises(workout) {
+          return (workout.exercise_count || 0) + (workout.focus_area_count || 0);
+        },
+        workoutTypes(workout) {
+          if (!workout.workout_types || workout.workout_types.length === 0) return 'ללא סוג';
+          return workout.workout_types.map(t => t.name_he).join(' + ');
+        },
+        formatDate(dateStr) {
+          if (!dateStr) return 'ללא תאריך';
+          const date = new Date(dateStr);
+          if (isNaN(date.getTime())) return 'תאריך לא תקין';
+          const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+          const dName = days[date.getDay()];
+          return `${dName} · ${date.getDate()}/${date.getMonth()+1}`;
+        },
+        workoutClass(dateStr) {
+          const today = new Date();
+          const date = new Date(dateStr);
+          const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const workoutDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          if (workoutDate < todayDate) return 'workout-past';
+          if (workoutDate.getTime() === todayDate.getTime()) return 'workout-today';
+          return 'workout-future';
+        },
+        openWorkout(id) {
+          window.location.href = `workout.html?id=${id}`;
+        }
+      },
+      mounted() {
+        this.fetchWorkouts();
+      }
+    });
+  </script>
+</body>
+</html>

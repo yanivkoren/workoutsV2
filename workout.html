@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,145 +8,222 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <style>
-    body { background-color: #f8f9fa; font-family: 'Heebo', sans-serif; }
-    .header-buttons button { margin-left: 0.5rem; }
-    .spinner-border { width: 1.2rem; height: 1.2rem; border-width: 0.15em; margin-right: 0.4rem; }
-    .workout-card { background: #fff; border-radius: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 1rem 1.2rem; margin-bottom: 1.5rem; }
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Heebo', sans-serif;
+    }
+
+    .header-buttons button {
+      margin-left: 0.5rem;
+    }
+
+    .spinner-border {
+      width: 1.2rem;
+      height: 1.2rem;
+      border-width: 0.15em;
+      margin-right: 0.4rem;
+    }
+
+    .workout-card {
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      padding: 1rem 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
     .exercise-image {
-  width: 100%;
-  max-width: 300px;   /* הגבלה במסכים רגילים */
-  border-radius: 0.75rem;
-  margin-top: 0.75rem;
-}
+      width: 100%;
+      max-width: 300px;
+      border-radius: 0.75rem;
+      margin-top: 0.75rem;
+    }
 
-/* במסכים גדולים – נקטין עוד */
-@media (min-width: 1200px) {
-  .exercise-image {
-    max-width: 220px;
-  }
-}
+    /* ===== מסגרת לפי סוג אימון ===== */
+    .workout-card {
+      border-right: 8px solid transparent;
+    }
 
-    #datePickerContainer { display: none; margin-top: 0.5rem; }
-    #updatePopup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.2); padding: 1.5rem; z-index: 1000; width: 300px; }
-    #popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999; }
-    #updatePopup input { text-align: center; }
+    /* לפי סוג אימון */
+    .type-cardio {
+      border-right-color: #2e7d32;
+    }
+
+    .type-core {
+      border-right-color: #6a1b9a;
+    }
+
+    .type-balance {
+      border-right-color: #ef6c00;
+    }
+
+    .type-flexibility {
+      border-right-color: #039be5;
+    }
+
+    .type-strength {
+      border-right-color: #b71c1c;
+    }
+
+
+    /* במסכים גדולים – נקטין עוד */
+    @media (min-width: 1200px) {
+      .exercise-image {
+        max-width: 220px;
+      }
+    }
+
+    #datePickerContainer {
+      display: none;
+      margin-top: 0.5rem;
+    }
+
+    #updatePopup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      padding: 1.5rem;
+      z-index: 1000;
+      width: 300px;
+    }
+
+    #popup-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 999;
+    }
+
+    #updatePopup input {
+      text-align: center;
+    }
 
     .thumb-gif {
-  width: 80px;
-  height: auto;
-  border-radius: 0.5rem;
-  display: block;
-}
-
+      width: 80px;
+      height: auto;
+      border-radius: 0.5rem;
+      display: block;
+    }
   </style>
 </head>
+
 <body>
-<div class="container py-4" id="workout-container">
-  <div class="text-center text-muted">טוען נתוני אימון...</div>
-</div>
-
-<div id="popup-overlay"></div>
-
-<!-- פופאפ עדכון סטים / חזרות / עומס -->
-<div id="updatePopup">
-  <h5 class="mb-3 text-center">עדכון סטים / חזרות / עומס</h5>
-  <div class="mb-2">
-    <label class="form-label">סטים:</label>
-    <input type="number" id="popup-sets" class="form-control" min="1" />
+  <div class="container py-4" id="workout-container">
+    <div class="text-center text-muted">טוען נתוני אימון...</div>
   </div>
-  <div class="mb-2">
-    <label class="form-label">חזרות:</label>
-    <input type="number" id="popup-reps" class="form-control" min="1" />
-  </div>
-  <div class="mb-2">
-    <label class="form-label">זמן (שניות):</label>
-    <input type="number" id="popup-time" class="form-control" min="0" step="5" />
-  </div>
-  <div class="mb-2">
-    <label class="form-label">עומס:</label>
-    <input type="text" id="popup-load" class="form-control" />
-  </div>
-  <div id="popup-error" class="text-danger small text-center"></div>
-  <div class="d-flex justify-content-between mt-3">
-    <button id="popup-cancel" class="btn btn-outline-secondary">בטל</button>
-    <button id="popup-save" class="btn btn-success">עדכן</button>
-  </div>
-</div>
 
-<!-- ✅ פופאפ חדש: החלפת תרגיל -->
-<div id="replacePopup" style="display:none; position:fixed; inset:0; z-index:1001;">
-  <div style="background:white; border-radius:1rem; width:350px; margin:10% auto; padding:1rem; box-shadow:0 2px 10px rgba(0,0,0,0.3)">
+  <div id="popup-overlay"></div>
 
-    <h5 class="text-center mb-3" id="replacePopupTitle">בחר תרגיל חלופי</h5>
-
-
-    <div id="exerciseList" style="max-height:300px; overflow-y:auto;"></div>
-
-    <div class="d-flex justify-content-between mt-3">
-      <button class="btn btn-outline-secondary" id="replaceCancel">ביטול</button>
-      <button class="btn btn-success" id="replaceConfirm">אישור</button>
+  <!-- פופאפ עדכון סטים / חזרות / עומס -->
+  <div id="updatePopup">
+    <h5 class="mb-3 text-center">עדכון סטים / חזרות / עומס</h5>
+    <div class="mb-2">
+      <label class="form-label">סטים:</label>
+      <input type="number" id="popup-sets" class="form-control" min="1" />
     </div>
-
+    <div class="mb-2">
+      <label class="form-label">חזרות:</label>
+      <input type="number" id="popup-reps" class="form-control" min="1" />
+    </div>
+    <div class="mb-2">
+      <label class="form-label">זמן (שניות):</label>
+      <input type="number" id="popup-time" class="form-control" min="0" step="5" />
+    </div>
+    <div class="mb-2">
+      <label class="form-label">עומס:</label>
+      <input type="text" id="popup-load" class="form-control" />
+    </div>
+    <div id="popup-error" class="text-danger small text-center"></div>
+    <div class="d-flex justify-content-between mt-3">
+      <button id="popup-cancel" class="btn btn-outline-secondary">בטל</button>
+      <button id="popup-save" class="btn btn-success">עדכן</button>
+    </div>
   </div>
-</div>
+
+  <!-- ✅ פופאפ חדש: החלפת תרגיל -->
+  <div id="replacePopup" style="display:none; position:fixed; inset:0; z-index:1001;">
+    <div
+      style="background:white; border-radius:1rem; width:350px; margin:10% auto; padding:1rem; box-shadow:0 2px 10px rgba(0,0,0,0.3)">
+
+      <h5 class="text-center mb-3" id="replacePopupTitle">בחר תרגיל חלופי</h5>
+
+
+      <div id="exerciseList" style="max-height:300px; overflow-y:auto;"></div>
+
+      <div class="d-flex justify-content-between mt-3">
+        <button class="btn btn-outline-secondary" id="replaceCancel">ביטול</button>
+        <button class="btn btn-success" id="replaceConfirm">אישור</button>
+      </div>
+
+    </div>
+  </div>
 
 
   <script>
     //const workoutId = 30;
     const urlParams = new URLSearchParams(window.location.search);
     const workoutId = urlParams.get('id');
-    
+
     let currentItemId = null;
     let allItems = [];
 
 
-const repsInput = document.getElementById('popup-reps');
-const timeInput = document.getElementById('popup-time');
+    const repsInput = document.getElementById('popup-reps');
+    const timeInput = document.getElementById('popup-time');
 
-// שינוי חזרות -> מאפס ומנטרל זמן
-repsInput.addEventListener('input', () => {
-  if (repsInput.value !== '') {
-    timeInput.value = '';
-    timeInput.disabled = true;
-  } else {
-    timeInput.disabled = false;
-  }
-});
+    // שינוי חזרות -> מאפס ומנטרל זמן
+    repsInput.addEventListener('input', () => {
+      if (repsInput.value !== '') {
+        timeInput.value = '';
+        timeInput.disabled = true;
+      } else {
+        timeInput.disabled = false;
+      }
+    });
 
-// שינוי זמן -> מאפס ומנטרל חזרות
-timeInput.addEventListener('input', () => {
-  if (timeInput.value !== '') {
-    repsInput.value = '';
-    repsInput.disabled = true;
-  } else {
-    repsInput.disabled = false;
-  }
-});
-
-
+    // שינוי זמן -> מאפס ומנטרל חזרות
+    timeInput.addEventListener('input', () => {
+      if (timeInput.value !== '') {
+        repsInput.value = '';
+        repsInput.disabled = true;
+      } else {
+        repsInput.disabled = false;
+      }
+    });
 
 
-   async function fetchWorkoutDetails() {
-  try {
-    const endpoint = `https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/get-workout-details?workout_id=${workoutId}&_=${Date.now()}`;
 
-    const res = await axios.get(endpoint);
-    if (!res.data || !res.data.workout) throw new Error('לא נמצאו נתוני אימון');
 
-    const w = res.data.workout;
-    const items = res.data.items || [];
+    async function fetchWorkoutDetails() {
+      try {
+        const endpoint = `https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/get-workout-details?workout_id=${workoutId}&_=${Date.now()}`;
 
-    // ✅ זה החלק הקריטי!
-    workout = w;
+        const res = await axios.get(endpoint);
+        if (!res.data || !res.data.workout) throw new Error('לא נמצאו נתוני אימון');
 
-    renderWorkout(w, items);
+        const w = res.data.workout;
+        const items = res.data.items || [];
 
-  } catch (err) {
-    document.getElementById('workout-container').innerHTML =
-      `<div class='alert alert-danger'>שגיאה בטעינת נתוני האימון</div>`;
-    console.error(err);
-  }
-}
+        // ✅ זה החלק הקריטי!
+        workout = w;
+
+        renderWorkout(w, items);
+
+      } catch (err) {
+        document.getElementById('workout-container').innerHTML =
+          `<div class='alert alert-danger'>שגיאה בטעינת נתוני האימון</div>`;
+        console.error(err);
+      }
+    }
 
     function renderWorkout(workout, items) {
       allItems = items; // ✅ קריטי
@@ -187,19 +265,19 @@ timeInput.addEventListener('input', () => {
 
       document.getElementById('popup-cancel').onclick = closePopup;
       document.getElementById('popup-save').onclick = savePopupData;
-        document.getElementById('back-btn').addEventListener('click', () => {
-  if (workout.state === 'בוצע') {
-    window.location.href = 'complited_workouts.html';
-  } else {
-    window.location.href = 'planned_workouts.html';
-  }
-});
+      document.getElementById('back-btn').addEventListener('click', () => {
+        if (workout.state === 'בוצע') {
+          window.location.href = 'complited_workouts.html';
+        } else {
+          window.location.href = 'planned_workouts.html';
+        }
+      });
 
 
     }
 
     function renderItem(item) {
-//console.log("ITEM FULL:", item);
+      //console.log("ITEM FULL:", item);
       const e = item.exercise || {};
       const focus = item.focus_area || {};
       const wType = item.workout_type || {};
@@ -208,12 +286,13 @@ timeInput.addEventListener('input', () => {
       const subtitle = isExercise ? `${e.name_en || ''}` : '';
       const type = `${wType.name_he || ''}`;
       const area = `${focus.name_he || ''}`;
-      const volume = item.reps_per_set ? `${item.sets}×${item.reps_per_set} חזרות` : `${item.sets}×${item.time_per_set_seconds } שניות`;
+      const volume = item.reps_per_set ? `${item.sets}×${item.reps_per_set} חזרות` : `${item.sets}×${item.time_per_set_seconds} שניות`;
       const load = item.load_used ? `🏋️ עומס: ${item.load_used}` : '';
       const image = e.default_gif_url || item.gif_url || '';
 
       return `
-        <div class="workout-card">
+        <div class="workout-card type-${(item.workout_type?.code || '').toLowerCase()}">
+
           <h5>
             <span class="text-muted me-2" style="direction: rtl; unicode-bidi: isolate;">
               ${item.order_in_workout}#
@@ -242,32 +321,32 @@ timeInput.addEventListener('input', () => {
     }
 
 
-function openPopup(itemId) {
-  currentItemId = itemId;
-  let selectedExerciseId = null;
+    function openPopup(itemId) {
+      currentItemId = itemId;
+      let selectedExerciseId = null;
 
-  const item = allItems.find(i => i.workout_exercise_id === itemId);
-  if (!item) return;
+      const item = allItems.find(i => i.workout_exercise_id === itemId);
+      if (!item) return;
 
-  const setsInput = document.getElementById('popup-sets');
-  const repsInput = document.getElementById('popup-reps');
-  const timeInput = document.getElementById('popup-time');
-  const loadInput = document.getElementById('popup-load');
+      const setsInput = document.getElementById('popup-sets');
+      const repsInput = document.getElementById('popup-reps');
+      const timeInput = document.getElementById('popup-time');
+      const loadInput = document.getElementById('popup-load');
 
-  // ✅ איפוס מלא – שני השדות תמיד פתוחים בתחילה
-  repsInput.disabled = false;
-  timeInput.disabled = false;
+      // ✅ איפוס מלא – שני השדות תמיד פתוחים בתחילה
+      repsInput.disabled = false;
+      timeInput.disabled = false;
 
-  // הצבת ערכים קיימים
-  setsInput.value = item.sets || 1;
-  repsInput.value = item.reps_per_set || '';
-  timeInput.value = item.time_per_set_seconds || '';
-  loadInput.value = item.load_used || '';
-  document.getElementById('popup-error').textContent = '';
+      // הצבת ערכים קיימים
+      setsInput.value = item.sets || 1;
+      repsInput.value = item.reps_per_set || '';
+      timeInput.value = item.time_per_set_seconds || '';
+      loadInput.value = item.load_used || '';
+      document.getElementById('popup-error').textContent = '';
 
-  document.getElementById('popup-overlay').style.display = 'block';
-  document.getElementById('updatePopup').style.display = 'block';
-}
+      document.getElementById('popup-overlay').style.display = 'block';
+      document.getElementById('updatePopup').style.display = 'block';
+    }
 
 
 
@@ -277,36 +356,36 @@ function openPopup(itemId) {
       document.getElementById('updatePopup').style.display = 'none';
     }
 
-async function openReplacePopup(itemId) {
-  currentItemId = itemId;
-  selectedExerciseId = null;
+    async function openReplacePopup(itemId) {
+      currentItemId = itemId;
+      selectedExerciseId = null;
 
-  const item = allItems.find(i => i.workout_exercise_id === itemId);
-  if (!item) return;
+      const item = allItems.find(i => i.workout_exercise_id === itemId);
+      if (!item) return;
 
-  const focus = item.focus_area || {};
-  const areaId = focus.id;
-  const areaName = focus.name_he || '';
+      const focus = item.focus_area || {};
+      const areaId = focus.id;
+      const areaName = focus.name_he || '';
 
-  // כותרת דינמית
-  const titleEl = document.getElementById('replacePopupTitle');
-  titleEl.textContent = `בחר תרגיל חלופי – אזור ${areaId}: ${areaName}`;
+      // כותרת דינמית
+      const titleEl = document.getElementById('replacePopupTitle');
+      titleEl.textContent = `בחר תרגיל חלופי – אזור ${areaId}: ${areaName}`;
 
-  const listEl = document.getElementById('exerciseList');
-  listEl.innerHTML = "טוען תרגילים...";
+      const listEl = document.getElementById('exerciseList');
+      listEl.innerHTML = "טוען תרגילים...";
 
-  try {
-    const endpoint = `https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/get-exercises-library?focus_area_id=${areaId}`;
-    const res = await axios.get(endpoint);
+      try {
+        const endpoint = `https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/get-exercises-library?focus_area_id=${areaId}`;
+        const res = await axios.get(endpoint);
 
-    const exercises = res.data.exercises || [];
+        const exercises = res.data.exercises || [];
 
-    if (exercises.length === 0) {
-      listEl.innerHTML = "<div class='text-muted text-center'>לא נמצאו תרגילים לאזור זה</div>";
-      return;
-    }
+        if (exercises.length === 0) {
+          listEl.innerHTML = "<div class='text-muted text-center'>לא נמצאו תרגילים לאזור זה</div>";
+          return;
+        }
 
-    listEl.innerHTML = exercises.map(ex => `
+        listEl.innerHTML = exercises.map(ex => `
       <label class="border rounded p-2 mb-2 d-flex gap-2 align-items-start w-100"
              style="cursor:pointer">
 
@@ -331,79 +410,79 @@ async function openReplacePopup(itemId) {
       </label>
     `).join("");
 
-  } catch (err) {
-    listEl.innerHTML = "<div class='text-danger text-center'>שגיאה בטעינת תרגילים</div>";
-    console.error(err);
-  }
+      } catch (err) {
+        listEl.innerHTML = "<div class='text-danger text-center'>שגיאה בטעינת תרגילים</div>";
+        console.error(err);
+      }
 
-  document.getElementById('replacePopup').style.display = 'block';
-  document.getElementById('popup-overlay').style.display = 'block';
-}
-
-
-
-function closeReplacePopup() {
-  document.getElementById('replacePopup').style.display = 'none';
-  document.getElementById('popup-overlay').style.display = 'none';
-}
-
-async function savePopupData() {
-   console.log("currentItemId:", currentItemId);
-
-
-  const btn = document.getElementById('popup-save');
-  const spinner = document.createElement('span');
-  spinner.className = 'spinner-border spinner-border-sm';
-  btn.prepend(spinner);
-  document.getElementById('popup-error').textContent = '';
-
-  const sets = parseInt(document.getElementById('popup-sets').value) || null;
-const repsVal = document.getElementById('popup-reps').value;
-const timeVal = document.getElementById('popup-time').value;
-
-const reps = repsVal === '' ? null : parseInt(repsVal, 10);
-const time = timeVal === '' ? null : parseInt(timeVal, 10);
-
-
-  const load = document.getElementById('popup-load').value || null;
-
-
-
-console.log("payload", {
-  workout_exercise_id: currentItemId,
-  sets,
-  reps,
-  duration_seconds: time,
-  weight: load
-});
-
-
-
-
-  try {
-    const endpoint = 'https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/update-workout-exercise-stats';
-
-    const payload = {
-      workout_exercise_id: currentItemId,
-      sets,
-      reps,
-      duration_seconds: time,
-      weight: load
-    };
-
-    const res = await axios.post(endpoint, payload);
-    if (!res.data || !res.data.success) {
-      throw new Error(res.data?.error || 'עדכון נכשל');
+      document.getElementById('replacePopup').style.display = 'block';
+      document.getElementById('popup-overlay').style.display = 'block';
     }
 
-    closePopup();
-    await fetchWorkoutDetails();
-  } catch (err) {
-    document.getElementById('popup-error').textContent = err.message || 'שגיאה בעדכון הנתונים';
-  } finally {
-    spinner.remove();
-  }
-}
+
+
+    function closeReplacePopup() {
+      document.getElementById('replacePopup').style.display = 'none';
+      document.getElementById('popup-overlay').style.display = 'none';
+    }
+
+    async function savePopupData() {
+      console.log("currentItemId:", currentItemId);
+
+
+      const btn = document.getElementById('popup-save');
+      const spinner = document.createElement('span');
+      spinner.className = 'spinner-border spinner-border-sm';
+      btn.prepend(spinner);
+      document.getElementById('popup-error').textContent = '';
+
+      const sets = parseInt(document.getElementById('popup-sets').value) || null;
+      const repsVal = document.getElementById('popup-reps').value;
+      const timeVal = document.getElementById('popup-time').value;
+
+      const reps = repsVal === '' ? null : parseInt(repsVal, 10);
+      const time = timeVal === '' ? null : parseInt(timeVal, 10);
+
+
+      const load = document.getElementById('popup-load').value || null;
+
+
+
+      console.log("payload", {
+        workout_exercise_id: currentItemId,
+        sets,
+        reps,
+        duration_seconds: time,
+        weight: load
+      });
+
+
+
+
+      try {
+        const endpoint = 'https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/update-workout-exercise-stats';
+
+        const payload = {
+          workout_exercise_id: currentItemId,
+          sets,
+          reps,
+          duration_seconds: time,
+          weight: load
+        };
+
+        const res = await axios.post(endpoint, payload);
+        if (!res.data || !res.data.success) {
+          throw new Error(res.data?.error || 'עדכון נכשל');
+        }
+
+        closePopup();
+        await fetchWorkoutDetails();
+      } catch (err) {
+        document.getElementById('popup-error').textContent = err.message || 'שגיאה בעדכון הנתונים';
+      } finally {
+        spinner.remove();
+      }
+    }
 
     async function updateWorkoutData(data) {
       const endpoint = 'https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/update-workout';
@@ -412,32 +491,32 @@ console.log("payload", {
       return res.data;
     }
 
-async function changeStatus() {
+    async function changeStatus() {
 
-  const currentState = workout.state;
-  const newState = currentState === 'בוצע' ? 'מתוכנן' : 'בוצע';
+      const currentState = workout.state;
+      const newState = currentState === 'בוצע' ? 'מתוכנן' : 'בוצע';
 
-  const confirmChange = confirm(`האם לשנות לסטטוס ${newState}?`);
-  if (!confirmChange) return;
+      const confirmChange = confirm(`האם לשנות לסטטוס ${newState}?`);
+      if (!confirmChange) return;
 
-  const btn = document.getElementById('status-btn');
-  const spinner = document.createElement('span');
-  spinner.className = 'spinner-border spinner-border-sm me-2';
-  btn.prepend(spinner);
+      const btn = document.getElementById('status-btn');
+      const spinner = document.createElement('span');
+      spinner.className = 'spinner-border spinner-border-sm me-2';
+      btn.prepend(spinner);
 
-  try {
-    await updateWorkoutData({ workout_id: workoutId, state: newState });
+      try {
+        await updateWorkoutData({ workout_id: workoutId, state: newState });
 
-    // ✅ זה החלק החשוב ביותר:
-    await fetchWorkoutDetails();   // רענון מלא מהשרת
+        // ✅ זה החלק החשוב ביותר:
+        await fetchWorkoutDetails();   // רענון מלא מהשרת
 
-  } catch (err) {
-    alert('שגיאה בעדכון סטטוס');
-    console.error(err);
-  } finally {
-    spinner.remove();
-  }
-}
+      } catch (err) {
+        alert('שגיאה בעדכון סטטוס');
+        console.error(err);
+      } finally {
+        spinner.remove();
+      }
+    }
 
     function toggleDatePicker() {
       const container = document.getElementById('datePickerContainer');
@@ -467,50 +546,51 @@ async function changeStatus() {
     }
 
 
-// חיבור כפתורי פופאפ החלפת תרגיל (רק פעם אחת!)
-document.getElementById('replaceCancel').onclick = closeReplacePopup;
+    // חיבור כפתורי פופאפ החלפת תרגיל (רק פעם אחת!)
+    document.getElementById('replaceCancel').onclick = closeReplacePopup;
 
-document.getElementById('replaceConfirm').onclick = async () => {
-  if (!selectedExerciseId) {
-    alert("יש לבחור תרגיל לפני אישור");
-    return;
-  }
+    document.getElementById('replaceConfirm').onclick = async () => {
+      if (!selectedExerciseId) {
+        alert("יש לבחור תרגיל לפני אישור");
+        return;
+      }
 
-  const payload = {
-    workout_exercise_id: currentItemId,
-    exercise_id: selectedExerciseId,
-    focus_area_id: null
-  };
+      const payload = {
+        workout_exercise_id: currentItemId,
+        exercise_id: selectedExerciseId,
+        focus_area_id: null
+      };
 
-  console.log("📤 Payload נשלח:", payload);
+      console.log("📤 Payload נשלח:", payload);
 
-  try {
-    const res = await axios({
-      method: 'post',
-      url: 'https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/update-workout-exercise-target',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      data: payload
-    });
+      try {
+        const res = await axios({
+          method: 'post',
+          url: 'https://qwyybhjlpgrrxgpaeigp.supabase.co/functions/v1/update-workout-exercise-target',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          data: payload
+        });
 
-    console.log("✅ Response:", res.data);
+        console.log("✅ Response:", res.data);
 
-    closeReplacePopup();
-    await fetchWorkoutDetails();
+        closeReplacePopup();
+        await fetchWorkoutDetails();
 
-  } catch (err) {
-    console.error("❌ Axios full error:", err);
-    alert(
-      "Network Error\n\n" +
-      (err.message || '') +
-      (err.response ? '\nStatus: ' + err.response.status : '')
-    );
-  }
-};
+      } catch (err) {
+        console.error("❌ Axios full error:", err);
+        alert(
+          "Network Error\n\n" +
+          (err.message || '') +
+          (err.response ? '\nStatus: ' + err.response.status : '')
+        );
+      }
+    };
 
 
     fetchWorkoutDetails();
   </script>
 </body>
+
 </html>

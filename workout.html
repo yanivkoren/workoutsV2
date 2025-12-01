@@ -696,103 +696,65 @@
         };
 
         /* ============================
-           טיימר משולב – גרסה רשמית
-           תומך: טיימר יחיד, השהיה, איפוס
-        ============================ */
+             ⏱️ טיימרים + צליל iPhone
+       ============================ */
 
-        let activeTimers = {};
+        let timerIntervals = {};
+        let remainingTimes = {};
+        let dingAudio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+
+        function playDing() {
+            dingAudio.currentTime = 0;
+            dingAudio.play().catch(() => { });
+        }
 
         function formatTime(sec) {
-            const m = String(Math.floor(sec / 60)).padStart(2, '0');
-            const s = String(sec % 60).padStart(2, '0');
+            const m = String(Math.floor(sec / 60)).padStart(2, "0");
+            const s = String(sec % 60).padStart(2, "0");
             return `${m}:${s}`;
         }
 
-        let dingAudio = null;
+        function startTimer(id, duration) {
+            initAudio();    // חובה לאייפון
 
-        function playEndSound() {
-            if (!audioCtx) return; // iOS safeguard
-
-            if (!dingAudio) {
-                dingAudio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+            // אם הטיימר ריק — הטענו את הזמן מהשרת
+            if (!remainingTimes[id]) {
+                remainingTimes[id] = duration;
             }
 
-            // חובה לאפס זמן במיוחד באייפון
-            dingAudio.currentTime = 0;
+            // צליל התחלה
+            playDing();
 
-            dingAudio.play().catch(err => console.log("Audio play blocked:", err));
-        }
+            // מחיקה של טיימר קיים
+            clearInterval(timerIntervals[id]);
 
-        function stopAllOtherTimers(exceptId) {
-            for (const id in activeTimers) {
-                if (id != exceptId) {
-                    const t = activeTimers[id];
-                    if (t.running) {
-                        clearInterval(t.interval);
-                        t.running = false;
+            timerIntervals[id] = setInterval(() => {
+                remainingTimes[id]--;
 
-                        // אפס תצוגת זמן
-                        document.getElementById(`timer-display-${id}`).textContent =
-                            `⏱️ ${formatTime(t.start)}`;
-                    }
-                }
-            }
-        }
+                const el = document.getElementById(`timer-display-${id}`);
+                if (el) el.textContent = "⏱️ " + formatTime(remainingTimes[id]);
 
-        function startTimer(itemId, startSeconds) {
-            initAudio();  // ← פותח את המנוע הקולי של iOS
-            if (!activeTimers[itemId]) {
-                activeTimers[itemId] = {
-                    start: startSeconds,
-                    remaining: startSeconds,
-                    interval: null,
-                    running: false
-                };
-            }
+                if (remainingTimes[id] <= 0) {
+                    clearInterval(timerIntervals[id]);
 
-            const t = activeTimers[itemId];
-
-            stopAllOtherTimers(itemId);
-
-            if (t.running) return;
-
-            t.running = true;
-
-            t.interval = setInterval(() => {
-                t.remaining--;
-
-                document.getElementById(`timer-display-${itemId}`).textContent =
-                    `⏱️ ${formatTime(t.remaining)}`;
-
-                if (t.remaining <= 0) {
-                    clearInterval(t.interval);
-                    t.running = false;
-                    playEndSound();
+                    // צליל סיום
+                    playDing();
                 }
             }, 1000);
         }
 
-        function pauseTimer(itemId) {
-            const t = activeTimers[itemId];
-            if (!t) return;
-
-            clearInterval(t.interval);
-            t.running = false;
+        function pauseTimer(id) {
+            clearInterval(timerIntervals[id]);
         }
 
-        function resetTimer(itemId, startSeconds) {
-            const t = activeTimers[itemId];
-            if (!t) return;
+        function resetTimer(id, duration) {
+            remainingTimes[id] = duration;
+            clearInterval(timerIntervals[id]);
 
-            clearInterval(t.interval);
-            t.running = false;
-
-            t.start = startSeconds;
-            t.remaining = startSeconds;
-
-            document.getElementById(`timer-display-${itemId}`).textContent =
-                `⏱️ ${formatTime(startSeconds)}`;
+            const el = document.getElementById(`timer-display-${id}`);
+            if (el) el.textContent = "⏱️ " + formatTime(duration);
         }
+
 
         fetchWorkoutDetails();
     </script>

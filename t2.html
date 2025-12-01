@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>טיימר לאייפון</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin-top: 50px;
+}
+#time {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+button {
+    padding: 10px 20px;
+    font-size: 18px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>טיימר בדיקה לאייפון</h2>
+
+<div id="time">00:05</div>
+
+<button onclick="startTimer()">▶️ התחל</button>
+
+<script>
+/* -------------------------------
+   פתיחת AudioContext (נדרש לאייפון)
+-------------------------------- */
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.resume();
+        console.log("AudioContext unlocked");
+    }
+}
+
+/* -------------------------------
+   צליל (נטען פעם אחת)
+-------------------------------- */
+let beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+
+/* -------------------------------
+   פונקציית טיימר
+-------------------------------- */
+let remaining = 5;
+let interval = null;
+
+function updateDisplay() {
+    const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+    const s = String(remaining % 60).padStart(2, '0');
+    document.getElementById("time").textContent = `${m}:${s}`;
+}
+
+function startTimer() {
+    initAudio();        // ← חובה להפעיל לפני כל ניגון באייפון
+    beep.play();        // ← צליל בעת התחלת הטיימר
+
+    remaining = 5;
+    updateDisplay();
+
+    clearInterval(interval);
+    interval = setInterval(() => {
+        remaining--;
+        updateDisplay();
+
+        if (remaining <= 0) {
+            clearInterval(interval);
+            beep.currentTime = 0;
+            beep.play();    // ← צליל בסיום הטיימר
+        }
+    }, 1000);
+}
+</script>
+
+</body>
+</html>

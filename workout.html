@@ -334,7 +334,11 @@
 
         function renderItem(item) {
             //console.log("ITEM FULL:", item);
+            //console.log("ITEM DATA:", item);
+
             const e = item.exercise || {};
+
+
             const focus = item.focus_area || {};
             const wType = item.workout_type || {};
             const isExercise = e.id != null;
@@ -342,9 +346,14 @@
             const subtitle = isExercise ? `${e.name_en || ''}` : '';
             const type = `${wType.name_he || ''}`;
             const area = `${focus.name_he || ''}`;
-            const volume = item.reps_per_set ? `${item.sets}×${item.reps_per_set} חזרות` : `${item.sets}×${item.time_per_set_seconds} שניות`;
+            const unilateralSuffix = item.is_unilateral === true ? " ↔️לכל צד↔️" : "";
+            const volume = item.reps_per_set
+                ? `${item.sets}×${item.reps_per_set} חזרות${unilateralSuffix}`
+                : `${item.sets}×${item.time_per_set_seconds} שניות${unilateralSuffix}`;
             const load = item.load_used ? `🏋️ עומס: ${item.load_used}` : '';
             const image = e.default_gif_url || item.gif_url || '';
+
+
 
             return `
         <div class="workout-card type-${(item.workout_type?.code || '').toLowerCase()}">

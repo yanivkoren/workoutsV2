@@ -2,37 +2,36 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>טיימר לאייפון</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>טיימר 15 שניות</title>
 <style>
-body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    margin-top: 50px;
-}
-#time {
-    font-size: 48px;
-    margin-bottom: 20px;
-}
-button {
-    padding: 10px 20px;
-    font-size: 18px;
-}
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin-top: 40px;
+    }
+    #time {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+    button {
+        font-size: 20px;
+        padding: 10px 20px;
+    }
 </style>
 </head>
-
 <body>
 
-<h2>טיימר בדיקה לאייפון</h2>
+<h2>⏱️ טיימר 15 שניות</h2>
 
-<div id="time">00:05</div>
+<div id="time">15</div>
 
 <button onclick="startTimer()">▶️ התחל</button>
 
 <script>
-/* -------------------------------
-   פתיחת AudioContext (נדרש לאייפון)
--------------------------------- */
+// ===============================
+//  iPhone Audio Unlock
+// ===============================
 let audioCtx = null;
 
 function initAudio() {
@@ -43,44 +42,41 @@ function initAudio() {
     }
 }
 
-/* -------------------------------
-   צליל (נטען פעם אחת)
--------------------------------- */
-let beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+// צליל קצר מהיר (מתאים לאייפון)
+const sound = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
 
-/* -------------------------------
-   פונקציית טיימר
--------------------------------- */
+// ===============================
+//  Timer 15 seconds
+// ===============================
 let remaining = 15;
 let interval = null;
 
-function updateDisplay() {
-    const m = String(Math.floor(remaining / 60)).padStart(2, '0');
-    const s = String(remaining % 60).padStart(2, '0');
-    document.getElementById("time").textContent = `${m}:${s}`;
+function playSound() {
+    sound.currentTime = 0;
+    sound.play().catch(err => console.log("Audio blocked:", err));
 }
 
 function startTimer() {
-    initAudio();        // ← חובה להפעיל לפני כל ניגון באייפון
-    beep.play();        // ← צליל בעת התחלת הטיימר
+    initAudio();        // Unlock audio
+    playSound();        // 🔔 צליל בתחילת הטיימר
 
-    remaining = 5;
-    updateDisplay();
+    remaining = 15;
+    document.getElementById("time").textContent = remaining;
 
-    clearInterval(interval);
+    if (interval) clearInterval(interval);
+
     interval = setInterval(() => {
         remaining--;
-        updateDisplay();
+        document.getElementById("time").textContent = remaining;
 
         if (remaining <= 0) {
             clearInterval(interval);
-            beep.currentTime = 0;
-            beep.play();    // ← צליל בסיום הטיימר
+            playSound(); // 🔔 צליל בסיום
         }
+
     }, 1000);
 }
 </script>
 
 </body>
 </html>
-

@@ -2,40 +2,110 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>iPhone Audio Test</title>
+<title>טיימר בדיקה לאייפון</title>
 <style>
-body { font-family: sans-serif; padding: 20px; }
-button { padding: 10px 20px; font-size: 18px; margin: 10px 0; }
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 40px;
+        background: #f2f2f2;
+    }
+    #timeDisplay {
+        font-size: 48px;
+        margin: 20px 0;
+    }
+    button {
+        padding: 10px 20px;
+        font-size: 20px;
+        margin: 8px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
 </style>
 </head>
 <body>
 
-<h2>בדיקת אודיו באייפון</h2>
+<h2>טיימר בדיקה — iPhone Ready</h2>
 
-<button onclick="playImmediate()">▶️ ניגון מיידי</button>
-<button onclick="playAfterDelay()">⏱️ ניגון לאחר 3 שניות</button>
+<div>
+    <button onclick="setTimer(10)">10 שניות</button>
+    <button onclick="setTimer(20)">20 שניות</button>
+    <button onclick="setTimer(30)">30 שניות</button>
+</div>
+
+<div id="timeDisplay">00:00</div>
+
+<button onclick="startTimer()">▶️ התחל</button>
+<button onclick="pauseTimer()">⏸ השהה</button>
+<button onclick="resetTimer()">🔁 אפס</button>
 
 <script>
+/* ========= iPhone Audio Unlock ========= */
+let audioCtx = null;
 
-// קובץ קול קצר שאמור לעבוד בכל דפדפן
-const audioUrl = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
-
-// 1️⃣ אמור לעבוד באייפון כי זה ניגון ישיר בעקבות לחיצה
-function playImmediate() {
-    const sound = new Audio(audioUrl);
-    sound.currentTime = 0;
-    sound.play().catch(err => alert("Immediate error: " + err));
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.resume();
+        console.log("AudioContext unlocked");
+    }
 }
 
-// 2️⃣ לרוב לא יעבוד באייפון → זה מה שאנחנו רוצים לבדוק
-function playAfterDelay() {
-    setTimeout(() => {
-        const sound = new Audio(audioUrl);
-        sound.currentTime = 0;
-        sound.play().catch(err => alert("Delayed error: " + err));
-    }, 3000);
+/* ========= צליל סיום ========= */
+let dingAudio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+
+function playEndSound() {
+    dingAudio.currentTime = 0;
+    dingAudio.play().catch(err => console.log("Audio blocked:", err));
 }
 
+/* ========= טיימר ========= */
+let timerSeconds = 0;
+let remaining = 0;
+let interval = null;
+
+function setTimer(sec) {
+    timerSeconds = sec;
+    remaining = sec;
+    updateDisplay();
+}
+
+function updateDisplay() {
+    let m = String(Math.floor(remaining / 60)).padStart(2, "0");
+    let s = String(remaining % 60).padStart(2, "0");
+    document.getElementById("timeDisplay").textContent = `${m}:${s}`;
+}
+
+function startTimer() {
+    initAudio(); // חובה באייפון
+
+    if (interval) return;
+    if (remaining <= 0) remaining = timerSeconds;
+
+    interval = setInterval(() => {
+        remaining--;
+        updateDisplay();
+
+        if (remaining <= 0) {
+            clearInterval(interval);
+            interval = null;
+            playEndSound();
+        }
+    }, 1000);
+}
+
+function pauseTimer() {
+    clearInterval(interval);
+    interval = null;
+}
+
+function resetTimer() {
+    clearInterval(interval);
+    interval = null;
+    remaining = timerSeconds;
+    updateDisplay();
+}
 </script>
+
 </body>
 </html>

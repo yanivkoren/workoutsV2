@@ -2,75 +2,40 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>בדיקת טיימר iPhone</title>
+<title>iPhone Audio Test</title>
 <style>
-    body { font-family: sans-serif; text-align:center; margin-top:50px; }
-    button { font-size: 22px; padding: 10px 20px; }
-    #time { font-size: 40px; margin-top: 20px; }
+body { font-family: sans-serif; padding: 20px; }
+button { padding: 10px 20px; font-size: 18px; margin: 10px 0; }
 </style>
 </head>
 <body>
 
-<h2>טיימר בדיקה לאייפון</h2>
+<h2>בדיקת אודיו באייפון</h2>
 
-<div id="time">00:05</div>
-
-<button onclick="startTimer()">▶️ התחל</button>
+<button onclick="playImmediate()">▶️ ניגון מיידי</button>
+<button onclick="playAfterDelay()">⏱️ ניגון לאחר 3 שניות</button>
 
 <script>
-/* ---------------------------------------------------
-   שלב 1: פתיחת AudioContext לאחר לחיצה (נדרש באייפון)
---------------------------------------------------- */
-let audioCtx = null;
 
-function unlockAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        audioCtx.resume();
-        console.log("AudioContext unlocked");
-    }
+// קובץ קול קצר שאמור לעבוד בכל דפדפן
+const audioUrl = "https://actions.google.com/sounds/v1/alarms/beep_short.ogg";
+
+// 1️⃣ אמור לעבוד באייפון כי זה ניגון ישיר בעקבות לחיצה
+function playImmediate() {
+    const sound = new Audio(audioUrl);
+    sound.currentTime = 0;
+    sound.play().catch(err => alert("Immediate error: " + err));
 }
 
-/* ---------------------------------------------------
-   שלב 2: צליל פשוט — בלי createMediaElementSource
---------------------------------------------------- */
-let beep = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-
-function playBeep() {
-    beep.currentTime = 0;
-    beep.play().catch(err => console.log("Audio blocked:", err));
+// 2️⃣ לרוב לא יעבוד באייפון → זה מה שאנחנו רוצים לבדוק
+function playAfterDelay() {
+    setTimeout(() => {
+        const sound = new Audio(audioUrl);
+        sound.currentTime = 0;
+        sound.play().catch(err => alert("Delayed error: " + err));
+    }, 3000);
 }
 
-/* ---------------------------------------------------
-   שלב 3: טיימר בסיסי 5 שניות
---------------------------------------------------- */
-let remaining = 5;
-let interval = null;
-
-function updateDisplay() {
-    document.getElementById("time").textContent = "00:0" + remaining;
-}
-
-function startTimer() {
-    unlockAudio();   // ← זה MUST באייפון
-
-    remaining = 5;
-    updateDisplay();
-
-    if (interval) clearInterval(interval);
-
-    interval = setInterval(() => {
-        remaining--;
-        updateDisplay();
-
-        if (remaining <= 0) {
-            clearInterval(interval);
-            playBeep();   // ← הצליל צריך להישמע כאן
-        }
-    }, 1000);
-}
 </script>
-
 </body>
 </html>

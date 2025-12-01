@@ -169,6 +169,19 @@
 
 
     <script>
+        /* ============================
+   iPhone/iOS Audio Unlock
+============================ */
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioCtx.resume();
+                console.log("AudioContext unlocked");
+            }
+        }
+
         //const workoutId = 30;
         const urlParams = new URLSearchParams(window.location.search);
         const workoutId = urlParams.get('id');
@@ -695,9 +708,19 @@
             return `${m}:${s}`;
         }
 
+        let dingAudio = null;
+
         function playEndSound() {
-            const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-            audio.play();
+            if (!audioCtx) return; // iOS safeguard
+
+            if (!dingAudio) {
+                dingAudio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+            }
+
+            // חובה לאפס זמן במיוחד באייפון
+            dingAudio.currentTime = 0;
+
+            dingAudio.play().catch(err => console.log("Audio play blocked:", err));
         }
 
         function stopAllOtherTimers(exceptId) {
@@ -717,6 +740,7 @@
         }
 
         function startTimer(itemId, startSeconds) {
+            initAudio();  // ← פותח את המנוע הקולי של iOS
             if (!activeTimers[itemId]) {
                 activeTimers[itemId] = {
                     start: startSeconds,

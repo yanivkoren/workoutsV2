@@ -59,7 +59,21 @@
   </div>
 
   <!-- History -->
-  <h5 class="mb-2">היסטוריית ביצועים</h5>
+  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <h5 class="mb-0">היסטוריית ביצועים</h5>
+    <div class="d-flex align-items-center gap-2">
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" id="plannedToggle" checked>
+        <label class="form-check-label" for="plannedToggle">כולל מתוכנן</label>
+      </div>
+      <select id="historyLimit" class="form-select form-select-sm" style="width:120px;">
+        <option value="10">10 אחרונים</option>
+        <option value="20" selected>20 אחרונים</option>
+        <option value="50">50 אחרונים</option>
+      </select>
+    </div>
+  </div>
+  <div class="text-muted small mb-2" id="historyMeta"></div>
 
   <!-- Desktop table -->
   <div class="card-soft d-none d-md-block">
@@ -96,7 +110,9 @@
   function esc(s){ return s==null ? "" : String(s).replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
   async function loadData(){
-    const res = await axios.get(`${ENDPOINT}?exercise_id=${exerciseId}`);
+    const includePlanned = document.getElementById("plannedToggle")?.checked ?? true;
+    const limit = Number(document.getElementById("historyLimit")?.value || 20);
+    const res = await axios.get(`${ENDPOINT}?exercise_id=${exerciseId}&include_planned=${includePlanned}&limit=${limit}&offset=0&_=${Date.now()}`);
     const ex = res.data.exercise;
     const history = res.data.history || [];
 
@@ -144,6 +160,13 @@
         ? `${h.sets ?? "—"}×${h.reps_per_set}`
         : (h.time_per_set_seconds != null ? `${h.sets ?? "—"}×${h.time_per_set_seconds} שנ׳` : "—");
 
+    // Meta (count)
+    const total = res.data.total_history ?? history.length;
+    const shown = history.length;
+    const metaEl = document.getElementById("historyMeta");
+    if (metaEl) metaEl.textContent = `מוצגות ${shown} רשומות${total != null ? ` מתוך ${total}` : ""}`;
+
+
       const link = h.workout_id
         ? `<a href="workout.html?id=${encodeURIComponent(h.workout_id)}" class="text-decoration-none">${esc(h.workout_name || ("אימון #" + h.workout_id))}</a>`
         : esc(h.workout_name || "");
@@ -173,6 +196,12 @@
       `;
     }).join("");
   }
+
+  document.addEventListener("change", (e) => {
+    if (e.target && (e.target.id === "plannedToggle" || e.target.id === "historyLimit")) {
+      if (exerciseId) loadData();
+    }
+  });
 
   if(exerciseId) loadData();
 </script>

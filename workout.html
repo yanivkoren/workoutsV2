@@ -351,7 +351,14 @@
             const wType = item.workout_type || {};
 
             const isExercise = e.id != null;
-            const title = isExercise ? `${e.name_he}` : `${focus.name_he}`;
+            //const title = isExercise ? `${e.name_he}` : `${focus.name_he}`;
+            const title = isExercise
+              ? `<a href="exercise_details.html?exercise_id=${e.id}"
+              class="text-decoration-none">
+                ${e.name_he}
+                </a>`
+                : `${focus.name_he}`;
+
             const subtitle = isExercise ? `${e.name_en || ''}` : '';
             const type = `${wType.name_he || ''}`;
             const area = `${focus.name_he || ''}`;

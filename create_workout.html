@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>הוספת אימון חדש</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <style>
+    body { background:#f6f7fb; }
+    .card { border:0; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+    .table thead th { white-space: nowrap; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .muted { color:#6c757d; }
+    .row-handle { display:flex; gap:.25rem; }
+    .row-handle .btn { padding:.15rem .45rem; }
+    .required::after{ content:" *"; color:#dc3545; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand bg-white border-bottom sticky-top">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="index.html">Workout App</a>
+    <div class="ms-auto d-flex gap-2">
+      <a class="btn btn-outline-secondary btn-sm" href="planned_workouts.html">מתוכננים</a>
+      <a class="btn btn-outline-secondary btn-sm" href="complited_workouts.html">בוצעו</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">הוספת אימון חדש</h1>
+    <span class="badge text-bg-primary">create-workout</span>
+  </div>
+
+  <div id="alert" class="alert d-none" role="alert"></div>
+
+  <!-- Workout header -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          <label class="form-label required" for="name">שם אימון</label>
+          <input id="name" class="form-control" placeholder="לדוגמה: Core A / Upper 1" maxlength="120" />
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <label class="form-label" for="is_template">תבנית?</label>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="is_template">
+            <label class="form-check-label" for="is_template">כן</label>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <label class="form-label" for="state">סטטוס</label>
+          <select id="state" class="form-select">
+            <option value="מתוכנן" selected>מתוכנן</option>
+            <option value="בוצע">בוצע</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-lg-2" id="dateWrap">
+          <label class="form-label" for="workout_date" id="dateLabel">תאריך</label>
+          <input id="workout_date" type="date" class="form-control" />
+          <div class="form-text muted" id="dateHint">נדרש כשסטטוס “בוצע” (ולא תבנית).</div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label" for="notes">הערות</label>
+          <textarea id="notes" class="form-control" rows="2" placeholder="אופציונלי…"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div>
+          <h2 class="h5 mb-1">אזורי מיקוד באימון</h2>
+          <div class="small muted">
+            במסך זה בוחרים רק אזורי מיקוד וסדר ביצוע. ערכי סט/חזרות/זמן יישלחו כברירת מחדל מאחורי הקלעים.
+          </div>
+        </div>
+        <button id="addRow" class="btn btn-primary">+ הוסף אזור מיקוד</button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+          <tr>
+            <th style="width:120px">סדר</th>
+            <th class="required">אזור מיקוד</th>
+            <th style="width:120px" class="text-center">פעולות</th>
+          </tr>
+          </thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
+
+      <hr class="my-3">
+
+      <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div class="small muted">
+          <span class="fw-semibold">ברירת מחדל שנשלחת לשרת לכל שורה:</span>
+          <span class="mono">reps_per_set = <span id="defaultRepsLabel"></span></span>
+          <span class="mx-2">•</span>
+          <span class="mono">time_per_set_seconds = null</span>
+        </div>
+        <div class="d-flex gap-2">
+          <button id="previewBtn" class="btn btn-outline-secondary">תצוגה מקדימה (JSON)</button>
+          <button id="submitBtn" class="btn btn-success">שמור אימון</button>
+        </div>
+      </div>
+
+      <pre id="preview" class="d-none mt-3 p-3 bg-light border rounded small mono" style="max-height:280px; overflow:auto;"></pre>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios@1.6.8/dist/axios.min.js"></script>
+<script>
+  // ====== CONFIG ======
+  const SUPABASE_PROJECT_REF = "qwyybhjlpgrrxgpaeigp";
+  const CREATE_WORKOUT_ENDPOINT = `https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/create-workout`;
+
+  // נסיון ברירת מחדל לטעינת focus areas (אם קיים אצלך). אם לא עובד – עדיין אפשר להזין מזהה ידנית.
+  // אם יש לך endpoint אחר, החלף כאן.
+  const WORKOUT_CONFIG_ENDPOINT = `https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/get-workout-config`;
+
+  const DEFAULT_REPS_PER_SET = 10; // ברירת מחדל שנשלחת לשרת (כי השרת מחייב reps או time)
+  document.getElementById("defaultRepsLabel").textContent = DEFAULT_REPS_PER_SET;
+
+  // ====== STATE ======
+  let focusAreas = []; // [{id, name_he, workout_type_id, ...}]
+  let rows = [];       // [{focus_area_id: number|null}]
+
+  // ====== HELPERS ======
+  function $(id){ return document.getElementById(id); }
+
+  function showAlert(msg, type="danger"){
+    const el = $("alert");
+    el.className = `alert alert-${type}`;
+    el.textContent = msg;
+    el.classList.remove("d-none");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function hideAlert(){
+    $("alert").classList.add("d-none");
+  }
+
+  function isTemplate(){ return $("is_template").checked; }
+  function stateVal(){ return $("state").value; }
+
+  function normalizeDateInput(){
+    // UI rules:
+    // - אם תבנית: state ננעל ל"מתוכנן" ותאריך מנוקה ומנוטרל.
+    // - אם לא תבנית: תאריך חובה רק כשstate="בוצע".
+    if (isTemplate()){
+      $("state").value = "מתוכנן";
+      $("state").disabled = true;
+      $("workout_date").value = "";
+      $("workout_date").disabled = true;
+      $("dateLabel").classList.remove("required");
+      $("dateHint").textContent = "תבנית לא מקבלת תאריך.";
+    } else {
+      $("state").disabled = false;
+      $("workout_date").disabled = false;
+      if (stateVal() === "בוצע"){
+        $("dateLabel").classList.add("required");
+        $("dateHint").textContent = "חובה להזין תאריך לאימון שבוצע.";
+      } else {
+        $("dateLabel").classList.remove("required");
+        $("dateHint").textContent = "אופציונלי (למי שרוצה לתזמן).";
+      }
+    }
+  }
+
+  function renderRows(){
+    const tbody = $("itemsBody");
+    tbody.innerHTML = "";
+
+    if (!rows.length){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="3" class="text-center muted py-4">אין אזורי מיקוד עדיין. לחץ “הוסף אזור מיקוד”.</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    rows.forEach((r, idx) => {
+      const tr = document.createElement("tr");
+
+      const order = idx + 1;
+
+      const optionsHtml = focusAreas.length
+        ? ['<option value="">בחר אזור…</option>'].concat(
+            focusAreas.map(a => `<option value="${a.id}" ${String(a.id)===String(r.focus_area_id) ? "selected" : ""}>${escapeHtml((a.workout_type_name_he && a.workout_type_name_he !== 'ללא סוג' ? a.workout_type_name_he + ' – ' : '') + a.name_he)}</option>`)
+          ).join("")
+        : `<option value="">טען אזורים…</option>`;
+
+      tr.innerHTML = `
+        <td>
+          <div class="row-handle">
+            <span class="badge text-bg-secondary">#${order}</span>
+            <button class="btn btn-outline-secondary btn-sm" title="למעלה" ${idx===0 ? "disabled" : ""} data-act="up" data-idx="${idx}">↑</button>
+            <button class="btn btn-outline-secondary btn-sm" title="למטה" ${idx===rows.length-1 ? "disabled" : ""} data-act="down" data-idx="${idx}">↓</button>
+          </div>
+        </td>
+        <td>
+          ${focusAreas.length ? `
+            <select class="form-select" data-act="pick" data-idx="${idx}">
+              ${optionsHtml}
+            </select>
+          ` : `
+            <div class="d-flex gap-2">
+              <input class="form-control" placeholder="focus_area_id" inputmode="numeric" pattern="[0-9]*"
+                     value="${r.focus_area_id ?? ""}" data-act="manual" data-idx="${idx}">
+              <button class="btn btn-outline-secondary" data-act="reload">נסה לטעון רשימה</button>
+            </div>
+            <div class="form-text muted">לא הצלחתי לטעון את רשימת אזורי המיקוד מהשרת (get-workout-config). אפשר להזין ID ידנית או לעדכן את ה-endpoint בקובץ.</div>
+          `}
+        </td>
+        <td class="text-center">
+          <button class="btn btn-outline-danger btn-sm" data-act="del" data-idx="${idx}">מחק</button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function buildPayload(){
+    const name = $("name").value?.trim();
+    const notes = $("notes").value?.trim() || null;
+
+    const payload = {
+      name,
+      workout_date: null,
+      state: stateVal(),
+      notes,
+      is_template: isTemplate(),
+      items: []
+    };
+
+    const dateVal = $("workout_date").value || null;
+    if (!payload.is_template){
+      payload.workout_date = dateVal;
+    } else {
+      payload.workout_date = null;
+      payload.state = "מתוכנן";
+    }
+
+    payload.items = rows.map((r, idx) => ({
+      exercise_id: null,
+      focus_area_id: r.focus_area_id ? Number(r.focus_area_id) : null,
+      order_in_workout: idx + 1,
+      sets: null,
+      reps_per_set: DEFAULT_REPS_PER_SET,
+      time_per_set_seconds: null
+    }));
+
+    return payload;
+  }
+
+  function validateClient(payload){
+    if (!payload.name) return "יש להזין שם לאימון.";
+    if (payload.is_template === true && payload.state === "בוצע") return "תבנית אימון לא יכולה להיות במצב 'בוצע'.";
+    if (payload.is_template === false && payload.state === "בוצע" && !payload.workout_date) return "לאימון שבוצע חובה להזין תאריך.";
+    if (!payload.items.length) return "יש להוסיף לפחות אזור מיקוד אחד.";
+    for (let i=0;i<payload.items.length;i++){
+      const it = payload.items[i];
+      if (!it.focus_area_id) return `שורה ${i+1}: יש לבחור אזור מיקוד.`;
+      // reps/time נשלחים כברירת מחדל ולכן לא בודקים כאן.
+    }
+    return null;
+  }
+
+  async function tryLoadWorkoutConfig(){
+    try{
+      const res = await axios.get(WORKOUT_CONFIG_ENDPOINT);
+      const data = res.data || {};
+
+      // states
+      const states = data?.meta?.workout_states;
+      if (Array.isArray(states) && states.length){
+        const sel = $("state");
+        const current = sel.value || "מתוכנן";
+        sel.innerHTML = states.map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.label_he || s.code)}</option>`).join("");
+        if ([...sel.options].some(o => o.value === current)) sel.value = current;
+      }
+
+      // workout types map (id -> name_he)
+      const wtArr = Array.isArray(data?.workout_types) ? data.workout_types : [];
+      const workoutTypeNameById = new Map(
+        wtArr
+          .filter(wt => wt && wt.id != null)
+          // Prefer Hebrew name; fallback to code; finally id as string.
+          .map(wt => [Number(wt.id), (wt.name_he ?? wt.code ?? String(wt.id))])
+      );
+
+      // focus areas
+      const arr = Array.isArray(data?.focus_areas) ? data.focus_areas : [];
+      if (arr.length){
+        focusAreas = arr
+          .map(x => {
+            const wtId = x.workout_type_id ?? null;
+            return {
+            id: x.id,
+            name_he: x.name_he ?? x.name ?? x.title ?? String(x.id),
+            workout_type_id: wtId,
+            workout_type_name_he: (wtId != null ? (workoutTypeNameById.get(Number(wtId)) ?? "ללא סוג") : "ללא סוג"),
+            code: x.code ?? null
+          };
+          })
+          .filter(x => x.id != null);
+
+        // sort by focus area id (numeric)
+        focusAreas.sort((a,b) => Number(a.id) - Number(b.id));
+      } else {
+        focusAreas = [];
+      }
+
+      renderRows();
+      normalizeDateInput();
+      return true;
+    } catch(e){
+      console.error("Failed to load workout config", e);
+      focusAreas = [];
+      renderRows();
+      return false;
+    }
+  }
+
+  // ====== EVENTS ======
+  $("is_template").addEventListener("change", () => {
+    normalizeDateInput();
+  });
+
+  $("state").addEventListener("change", () => {
+    normalizeDateInput();
+  });
+
+  $("addRow").addEventListener("click", () => {
+    rows.push({ focus_area_id: null });
+    renderRows();
+  });
+
+  $("itemsBody").addEventListener("click", async (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+
+    const act = btn.dataset.act;
+    const idx = Number(btn.dataset.idx);
+
+    if (act === "up" && idx > 0){
+      [rows[idx-1], rows[idx]] = [rows[idx], rows[idx-1]];
+      renderRows();
+    } else if (act === "down" && idx < rows.length - 1){
+      [rows[idx+1], rows[idx]] = [rows[idx], rows[idx+1]];
+      renderRows();
+    } else if (act === "del"){
+      rows.splice(idx, 1);
+      renderRows();
+    } else if (act === "reload"){
+      await tryLoadWorkoutConfig();
+    }
+  });
+
+  $("itemsBody").addEventListener("change", (e) => {
+    const sel = e.target.closest("select");
+    if (sel && sel.dataset.act === "pick"){
+      const idx = Number(sel.dataset.idx);
+      const val = sel.value ? Number(sel.value) : null;
+      rows[idx].focus_area_id = val;
+    }
+  });
+
+  $("itemsBody").addEventListener("input", (e) => {
+    const inp = e.target.closest("input");
+    if (inp && inp.dataset.act === "manual"){
+      const idx = Number(inp.dataset.idx);
+      const v = inp.value.replace(/[^\d]/g,"");
+      inp.value = v;
+      rows[idx].focus_area_id = v ? Number(v) : null;
+    }
+  });
+
+  $("previewBtn").addEventListener("click", () => {
+    hideAlert();
+    const payload = buildPayload();
+    const err = validateClient(payload);
+    if (err) return showAlert(err, "warning");
+
+    const pre = $("preview");
+    pre.textContent = JSON.stringify(payload, null, 2);
+    pre.classList.toggle("d-none");
+  });
+
+  $("submitBtn").addEventListener("click", async () => {
+    hideAlert();
+    const payload = buildPayload();
+    const err = validateClient(payload);
+    if (err) return showAlert(err, "warning");
+
+    $("submitBtn").disabled = true;
+    $("submitBtn").textContent = "שומר…";
+
+    try{
+      const res = await axios.post(CREATE_WORKOUT_ENDPOINT, payload);
+      const wid = res.data?.workout_id;
+
+      if (!res.data?.success || !wid){
+        return showAlert("נוצרה תשובה לא צפויה מהשרת. בדוק את הקונסול.", "danger");
+      }
+
+      const link = `workout.html?id=${encodeURIComponent(wid)}`;
+      showAlert(`✅ האימון נשמר בהצלחה. מזהה: ${wid}. פתח: ${link}`, "success");
+
+      // make clickable link in alert (simple)
+      const alert = $("alert");
+      alert.innerHTML = `✅ האימון נשמר בהצלחה. מזהה: <span class="mono">${escapeHtml(wid)}</span><br>
+        <a class="btn btn-sm btn-outline-success mt-2" href="${escapeHtml(link)}">פתח את האימון</a>
+        <a class="btn btn-sm btn-outline-secondary mt-2 ms-2" href="planned_workouts.html">חזרה למתוכננים</a>`;
+
+    } catch (e){
+      console.error(e);
+      const msg = e?.response?.data?.error || e?.response?.data?.message || e.message || "שגיאה לא ידועה";
+      showAlert(`❌ שגיאה בשמירה: ${msg}`, "danger");
+    } finally {
+      $("submitBtn").disabled = false;
+      $("submitBtn").textContent = "שמור אימון";
+    }
+  });
+
+  // ====== INIT ======
+  normalizeDateInput();
+  rows = [{ focus_area_id: null }]; // שורה ראשונה כברירת מחדל
+  renderRows();
+  tryLoadWorkoutConfig();
+</script>
+</body>
+</html>
